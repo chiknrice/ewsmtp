@@ -1,0 +1,23 @@
+plugins {
+    id 'groovy'
+    id 'application'
+}
+
+group 'org.chiknrice'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    compile localGroovy()
+    compile 'org.subethamail:subethasmtp:3.1.7'
+    compile 'org.slf4j:slf4j-simple:1.7.5'
+    compile 'org.gartcimore.java:javamail4ews:1.0-SNAPSHOT'
+    compile 'commons-cli:commons-cli:1.4'
+    testCompile 'junit:junit:4.12'
+}
+
+mainClassName = 'org.chiknrice.mail.SmtpToEwsProxy'
