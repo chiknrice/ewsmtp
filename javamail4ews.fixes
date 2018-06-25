@@ -1,0 +1,196 @@
+diff --git a/.gitignore b/.gitignore
+index b299bd1..ba1bbe8 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -63,3 +63,6 @@ $RECYCLE.BIN/
+ 
+ # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+ hs_err_pid*
++
++.idea
++*.iml
+\ No newline at end of file
+diff --git a/pom.xml b/pom.xml
+index e22bfcd..f1cbd72 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -159,40 +159,6 @@
+                     </execution>
+                 </executions>
+             </plugin>
+-            <plugin>
+-                <groupId>org.apache.maven.plugins</groupId>
+-                <artifactId>maven-jar-plugin</artifactId>
+-                <version>2.4</version>
+-                <configuration>
+-                    <archive>
+-                        <manifest>
+-                            <addClasspath>true</addClasspath>
+-                            <classpathPrefix>lib/</classpathPrefix>
+-                        </manifest>
+-                    </archive>
+-                </configuration>
+-            </plugin>
+-            <plugin>
+-                <groupId>org.apache.maven.plugins</groupId>
+-                <artifactId>maven-dependency-plugin</artifactId>
+-                <executions>
+-                    <execution>
+-                        <id>copy-dependencies-no-version</id>
+-                        <phase>package</phase>
+-                        <goals>
+-                            <goal>copy-dependencies</goal>
+-                        </goals>
+-                        <configuration>
+-                            <stripVersion>true</stripVersion>
+-                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+-                            <overWriteReleases>false</overWriteReleases>
+-                            <overWriteSnapshots>false</overWriteSnapshots>
+-                            <overWriteIfNewer>true</overWriteIfNewer>
+-                            <includeScope>runtime</includeScope>
+-                        </configuration>
+-                    </execution>
+-                </executions>
+-            </plugin>
+ 
+             <plugin>
+                 <groupId>org.apache.maven.plugins</groupId>
+diff --git a/src/main/java/org/sourceforge/net/javamail4ews/util/Util.java b/src/main/java/org/sourceforge/net/javamail4ews/util/Util.java
+index 284189e..74b562d 100644
+--- a/src/main/java/org/sourceforge/net/javamail4ews/util/Util.java
++++ b/src/main/java/org/sourceforge/net/javamail4ews/util/Util.java
+@@ -119,7 +119,22 @@ public final class Util {
+         }
+ 		service.setTraceEnabled(enableTrace);
+ 
+-		ExchangeCredentials credentials = new WebCredentials(user, password);
++		String[] userElements = user.split("\\\\");
++		String username;
++		String domain = "";
++		switch (userElements.length) {
++			case 1:
++				username = userElements[0];
++				break;
++			case 2:
++				domain = userElements[0];
++				username = userElements[1];
++				break;
++			default:
++				throw new AuthenticationFailedException("Invalid credentials");
++		}
++
++		ExchangeCredentials credentials = new WebCredentials(username, password, domain);
+ 		service.setCredentials(credentials);
+ 
+ 		try {
+diff --git a/src/main/resources/javamail.providers b/src/main/resources/META-INF/javamail.providers
+similarity index 100%
+rename from src/main/resources/javamail.providers
+rename to src/main/resources/META-INF/javamail.providers
+diff --git a/src/main/resources/javamail-ews-bridge.default.properties b/src/main/resources/javamail-ews-bridge.default.properties
+index 926039f..61ee720 100644
+--- a/src/main/resources/javamail-ews-bridge.default.properties
++++ b/src/main/resources/javamail-ews-bridge.default.properties
+@@ -18,6 +18,7 @@
+ #Defines the defaults
+ org.sourceforge.net.javamail4ews.transport.EwsTransport.SendAndSaveCopy=true
+ org.sourceforge.net.javamail4ews.util.Util.VerifyConnectionOnConnect=true
++org.sourceforge.net.javamail4ews.util.Util.EnableServiceTrace=false
+ org.sourceforge.net.javamail4ews.store.EwsFolder.ItemViewMaxItems=2147483647
+ org.sourceforge.net.javamail4ews.store.EwsFolder.ConflictResolutionMode=AutoResolve
+ org.sourceforge.net.javamail4ews.store.EwsFolder.DeleteMode=MoveToDeletedItems
+diff --git a/target/classes/META-INF/javamail.providers b/target/classes/META-INF/javamail.providers
+new file mode 100644
+index 0000000..657b62d
+--- /dev/null
++++ b/target/classes/META-INF/javamail.providers
+@@ -0,0 +1,21 @@
++#The JavaMail4EWS project.
++#Copyright (C) 2011  Sebastian Just
++#
++#This library is free software; you can redistribute it and/or
++#modify it under the terms of the GNU Lesser General Public
++#License as published by the Free Software Foundation; either
++#version 3.0 of the License, or (at your option) any later version.
++#
++#This library is distributed in the hope that it will be useful,
++#but WITHOUT ANY WARRANTY; without even the implied warranty of
++#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++#Lesser General Public License for more details.
++#
++#You should have received a copy of the GNU Lesser General Public
++#License along with this library; if not, write to the Free Software
++#Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++
++# 
++protocol=ewstransport; type=transport; class=org.sourceforge.net.javamail4ews.transport.EwsTransport; vendor=zeemanSOFT; version=${project.version};
++# 
++protocol=ewsstore; type=store; class=org.sourceforge.net.javamail4ews.store.EwsStore; vendor=zeemanSOFT; version=${project.version};
+diff --git a/target/classes/javamail-ews-bridge.default.properties b/target/classes/javamail-ews-bridge.default.properties
+new file mode 100644
+index 0000000..61ee720
+--- /dev/null
++++ b/target/classes/javamail-ews-bridge.default.properties
+@@ -0,0 +1,25 @@
++#The JavaMail4EWS project.
++#Copyright (C) 2011  Sebastian Just
++#
++#This library is free software; you can redistribute it and/or
++#modify it under the terms of the GNU Lesser General Public
++#License as published by the Free Software Foundation; either
++#version 3.0 of the License, or (at your option) any later version.
++#
++#This library is distributed in the hope that it will be useful,
++#but WITHOUT ANY WARRANTY; without even the implied warranty of
++#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++#Lesser General Public License for more details.
++#
++#You should have received a copy of the GNU Lesser General Public
++#License along with this library; if not, write to the Free Software
++#Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++
++#Defines the defaults
++org.sourceforge.net.javamail4ews.transport.EwsTransport.SendAndSaveCopy=true
++org.sourceforge.net.javamail4ews.util.Util.VerifyConnectionOnConnect=true
++org.sourceforge.net.javamail4ews.util.Util.EnableServiceTrace=false
++org.sourceforge.net.javamail4ews.store.EwsFolder.ItemViewMaxItems=2147483647
++org.sourceforge.net.javamail4ews.store.EwsFolder.ConflictResolutionMode=AutoResolve
++org.sourceforge.net.javamail4ews.store.EwsFolder.DeleteMode=MoveToDeletedItems
++org.sourceforge.net.javamail4ews.store.EwsFolder.prefetchItems=true
+diff --git a/target/maven-archiver/pom.properties b/target/maven-archiver/pom.properties
+new file mode 100644
+index 0000000..e691f31
+--- /dev/null
++++ b/target/maven-archiver/pom.properties
+@@ -0,0 +1,5 @@
++#Generated by Maven
++#Fri Jun 22 10:20:26 NZST 2018
++version=1.0-SNAPSHOT
++groupId=org.gartcimore.java
++artifactId=javamail4ews
+diff --git a/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst b/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst
+new file mode 100644
+index 0000000..b78b19d
+--- /dev/null
++++ b/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst
+@@ -0,0 +1,8 @@
++org\sourceforge\net\javamail4ews\store\EwsFolder$1.class
++org\sourceforge\net\javamail4ews\store\EwsFolder.class
++org\sourceforge\net\javamail4ews\store\EwsStore.class
++org\sourceforge\net\javamail4ews\store\EwsFolder$FolderListenerPublisher.class
++org\sourceforge\net\javamail4ews\store\EwsMessage.class
++org\sourceforge\net\javamail4ews\transport\EwsTransport.class
++org\sourceforge\net\javamail4ews\util\EwsMailConverter.class
++org\sourceforge\net\javamail4ews\util\Util.class
+diff --git a/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst b/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst
+new file mode 100644
+index 0000000..9cd7e60
+--- /dev/null
++++ b/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst
+@@ -0,0 +1,6 @@
++C:\work\projects\javamail4ews\src\main\java\org\sourceforge\net\javamail4ews\transport\EwsTransport.java
++C:\work\projects\javamail4ews\src\main\java\org\sourceforge\net\javamail4ews\util\EwsMailConverter.java
++C:\work\projects\javamail4ews\src\main\java\org\sourceforge\net\javamail4ews\store\EwsStore.java
++C:\work\projects\javamail4ews\src\main\java\org\sourceforge\net\javamail4ews\store\EwsFolder.java
++C:\work\projects\javamail4ews\src\main\java\org\sourceforge\net\javamail4ews\util\Util.java
++C:\work\projects\javamail4ews\src\main\java\org\sourceforge\net\javamail4ews\store\EwsMessage.java
